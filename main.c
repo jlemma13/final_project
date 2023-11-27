@@ -1,14 +1,21 @@
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 160
 
+#include "background.h"
+#include "link.h"
+#include "map.h"
+#include "map2.h"
+
 #define MODE0 0x00
 #define BG0_ENABLE 0x100
+#define BG1_ENABLE 0x200
 
 #define SPRITE_MAP_2D 0x0
 #define SPRITE_MAP_1D 0x40
 #define SPRITE_ENABLE 0x1000
 
 volatile unsigned short* bg0_control = (volatile unsigned short*) 0x4000008;
+volatile unsigned short* bg1_control = (volatile unsigned short*) 0x400000a;
 
 #define PALETTE_SIZE 256
 
@@ -27,6 +34,8 @@ volatile unsigned short* buttons = (volatile unsigned short*) 0x04000130;
 
 volatile short* bg0_x_scroll = (unsigned short*) 0x4000010;
 volatile short* bg0_y_scroll = (unsigned short*) 0x4000012;
+volatile short* bg1_x_scroll = (unsigned short*) 0x4000014;
+volatile short* bg1_y_scroll = (unsigned short*) 0x4000016;
 
 #define BUTTON_A (1 << 0)
 #define BUTTON_B (1 << 1)
@@ -94,6 +103,16 @@ void setup_background() {
         (0 << 14);
 
     memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
+
+    *bg1_control = 1 |
+        (0 << 2) |
+        (0 << 6) |
+        (1 << 7) |
+        (24 << 8) |
+        (1 << 13) |
+        (0 << 14);
+
+    memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
 }
 
 void delay(unsigned int amount) {
@@ -125,7 +144,7 @@ enum SpritesSize {
     SIZE_32_64
 };
 
-struct Sprite* sprite_init(int x, int y, enum SpriteSize sizer, int horizontal_flip, int vertical_flip, int tile_index, int priority) {
+struct Sprite* sprite_init(int x, int y, enum SpritesSize size, int horizontal_flip, int vertical_flip, int tile_index, int priority) {
     
     int index = next_sprite_index++;
 
@@ -217,6 +236,179 @@ void sprite_set_offset(struct Sprite* sprite, int offset) {
 
 void setup_sprite_image() {
     // fill out once images are ready
+    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link_data, (link_width * link_height) / 2);
+}
+
+struct Link {
+    struct Sprite* sprite;
+    int x, y;
+    int yvel;
+    int gravity;
+    int frame;
+    int animation_delay;
+    int counter;
+    int move;
+    int border;
+    int falling;
+};
+
+void link_init(struct Link* link) {
+    link->x = 100;
+    link->y = 113;
+    link->yvel = 0;
+    link->gravity = 50;
+    link->border = 40;
+    link->frame = 0;
+    link->move = 0;
+    link->counter = 0;
+    link->falling = 0;
+    link->animation_delay = 8;
+    link->sprite = sprite_init(link->x, link->y, SIZE_16_32, 0, 0, link->frame, 0);
+}
+
+int link_left(struct Link* link) {
+    sprite_set_horizontal_flip(link->sprite, 1);
+    link->move = 1;
+    if (link->x < link->border) {
+        return 1;
+    } else {
+        link->x--;
+        return 0;
+    }
+}
+
+int link_right(struct Link* link) {
+    sprite_set_horizontal_flip(link->sprite, 0);
+    link->move = 1;
+    if (link->x > (SCREEN_WIDTH - 16 - link->border)) {
+        return 1;
+    } else {
+        link->x++;
+        return 0;
+    }
+}
+
+void link_stop(struct Link* link) {
+    link->move = 0;
+    link->frame = 0;
+    link->counter = 7;
+    sprite_set_offset(link->sprite, link->frame);
+}
+
+void link_jump(struct Link* link) {
+    if (!link->falling) {
+        link->yvel = -1350;
+        link->falling = 1;
+    }
+}
+
+unsigned short tile_lookup(int x, int y, int xscroll, int yscroll, const unsigned short* tilemap, int tilemap_w, int tilemap_h) {
+    x += xscroll;
+    y += yscroll;
+
+    x >> 3;
+    y >> 3;
+
+    while (x >= tilemap_w) {
+        x -= tilemap_w;
+    }
+    while (y >= tilemap_h) {
+        y -= tilemap_h;
+    }
+    while (x < 0) {
+        x += tilemap_w;
+    }
+    while (y < 0) {
+        y += tilemap_h;
+    }
+
+    int offset = 0;
+
+    if (tilemap_w == 64 && x >= 32) {
+        x -= 32;
+        offset += 0x400;
+    }
+
+    if (tilemap_h == 64 && y >= 32) {
+        y -= 32;
+        if (tilemap_w == 64) {
+            offset += 0x800;
+        } else {
+            offset += 0x400;
+        }
+    }
+
+    int index = y * 32 + x;
+    return tilemap[index + offset];
+}
+
+void link_update(struct Link* link, int xscroll) {
+    if (link->falling) {
+        link->y += (link->yvel >> 8);
+        link->yvel += link->gravity;
+    }
+
+    unsigned short tile = tile_lookup(link->x + 8, link->y + 32, xscroll, 0, map, map_width, map_height);
+
+    if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
+        link->falling = 0;
+        link->yvel = 0;
+
+        link->y &= ~0x3;
+
+        link->y++;
+    } else {
+        link->falling = 1;
+    }
+
+    if (link->move) {
+        link->counter++;
+        if (link->counter >= link->animation_delay) {
+            link->frame = link->frame + 16;
+            if (link->frame > 16) {
+                link->frame = 0;
+            }
+            sprite_set_offset(link->sprite, link->frame);
+            link->counter = 0;
+        }
+    }
+
+    sprite_position(link->sprite, link->x, link->y);
+}
+
+int main() {
+    *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
+    setup_background();
+    setup_sprite_image();
+    sprite_clear();
+    struct Link link;
+    link_init(&link);
+    int xscroll = 0;
+    while (1) {
+        link_update(&link, xscroll);
+        if (button_pressed(BUTTON_RIGHT)) {
+            if (link_right(&link)) {
+                xscroll++;
+            }
+        } else if (button_pressed(BUTTON_LEFT)) {
+            if (link_left(&link)) {
+                xscroll--;
+            }
+        } else {
+            link_stop(&link);
+        }
+        
+        if (button_pressed(BUTTON_A)) {
+            link_jump(&link);
+        }
+
+        wait_vblank();
+        *bg0_x_scroll = xscroll;
+        *bg0_x_scroll = 2 * xscroll;
+        sprite_update_all();
+        delay(300);
+    }
 }
 
 // fill out rest once images are ready to be used
