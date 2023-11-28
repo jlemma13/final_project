@@ -90,11 +90,11 @@ void memcpy16_dma(unsigned short* dest, unsigned short* source, int amount) {
 }
 
 void setup_background() {
-   /* memcpy16_dma((unsigned short*) bg_palette, (unsigned short*) background_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) bg_palette, (unsigned short*) background_palette, PALETTE_SIZE);
 
-    memcpy16_dma((unsigned short*) char_block(0), (unsigned short*) background_data, (background_width * background_height) / 2);*/
+    memcpy16_dma((unsigned short*) char_block(0), (unsigned short*) background_data, (background_width * background_height) / 2);
 
-    for (int i = 0; i < PALETTE_SIZE; i++) {
+    /*for (int i = 0; i < PALETTE_SIZE; i++) {
         bg_palette[i] = background_palette[i];
     }
 
@@ -102,7 +102,7 @@ void setup_background() {
     unsigned short* image = (unsigned short*) background_data;
     for (int i = 0; i < ((background_width * background_height) / 2); i++) {
         dest[i] = image[i];
-    }
+    }*/
 
     *bg0_control = 1 |
         (0 << 2) |
@@ -112,12 +112,12 @@ void setup_background() {
         (1 << 13) |
         (0 << 14);
 
-    dest = screen_block(16);
+    /*dest = screen_block(16);
     for (int i=0; i < (map_width * map_height); i++) {
         dest[i] = map[i];
-    }
+    }*/
 
-    //memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
+    memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
 
     *bg1_control = 0 |
         (0 << 2) |
@@ -127,12 +127,12 @@ void setup_background() {
         (1 << 13) |
         (0 << 14);
 
-    dest = screen_block(24);
+    /*dest = screen_block(24);
     for (int j = 0; j < (map_width * map_height); j++) {
         dest[j] = map2[j];
-    }
+    }*/
 
-    //memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
+    memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
 }
 
 void delay(unsigned int amount) {
@@ -369,7 +369,7 @@ void link_update(struct Link* link, int xscroll) {
         link->yvel += link->gravity;
     }
 
-    unsigned short tile = tile_lookup(link->x + 8, link->y + 32, xscroll, 0, map, map_width, map_height);
+    unsigned short tile = tile_lookup(link->x + 8, link->y + 32, xscroll, 0, map2, map2_width, map2_height);
 
     if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
         link->falling = 0;
@@ -419,7 +419,7 @@ int main() {
             link_stop(&link);
         }
         
-        if (button_pressed(BUTTON_A)) {
+        if (button_pressed(BUTTON_UP)) {
             link_jump(&link);
         }
 
