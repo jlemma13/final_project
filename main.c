@@ -2,7 +2,7 @@
 #define SCREEN_HEIGHT 160
 
 #include "background.h"
-#include "link.h"
+#include "koopa.h"
 #include "map.h"
 #include "map2.h"
 
@@ -65,7 +65,7 @@ unsigned char button_pressed(unsigned short button) {
 }
 
 volatile unsigned short* char_block(unsigned long block) {
-    return (volatile unsigned short*) (0x600000 + (block * 0x4000));
+    return (volatile unsigned short*) (0x6000000 + (block * 0x4000));
 }
 
 volatile unsigned short* screen_block(unsigned long block) {
@@ -90,11 +90,21 @@ void memcpy16_dma(unsigned short* dest, unsigned short* source, int amount) {
 }
 
 void setup_background() {
-    memcpy16_dma((unsigned short*) bg_palette, (unsigned short*) background_palette, PALETTE_SIZE);
+   /* memcpy16_dma((unsigned short*) bg_palette, (unsigned short*) background_palette, PALETTE_SIZE);
 
-    memcpy16_dma((unsigned short*) char_block(0), (unsigned short*) background_data, (background_width * background_height) / 2);
+    memcpy16_dma((unsigned short*) char_block(0), (unsigned short*) background_data, (background_width * background_height) / 2);*/
 
-    *bg0_control = 0 |
+    for (int i = 0; i < PALETTE_SIZE; i++) {
+        bg_palette[i] = background_palette[i];
+    }
+
+    volatile unsigned short* dest = char_block(0);
+    unsigned short* image = (unsigned short*) background_data;
+    for (int i = 0; i < ((background_width * background_height) / 2); i++) {
+        dest[i] = image[i];
+    }
+
+    *bg0_control = 1 |
         (0 << 2) |
         (0 << 6) |
         (1 << 7) |
@@ -102,9 +112,14 @@ void setup_background() {
         (1 << 13) |
         (0 << 14);
 
-    memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
+    dest = screen_block(16);
+    for (int i=0; i < (map_width * map_height); i++) {
+        dest[i] = map[i];
+    }
 
-    *bg1_control = 1 |
+    //memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
+
+    *bg1_control = 0 |
         (0 << 2) |
         (0 << 6) |
         (1 << 7) |
@@ -112,7 +127,12 @@ void setup_background() {
         (1 << 13) |
         (0 << 14);
 
-    memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
+    dest = screen_block(24);
+    for (int j = 0; j < (map_width * map_height); j++) {
+        dest[j] = map2[j];
+    }
+
+    //memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
 }
 
 void delay(unsigned int amount) {
@@ -236,8 +256,8 @@ void sprite_set_offset(struct Sprite* sprite, int offset) {
 
 void setup_sprite_image() {
     // fill out once images are ready
-    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link_palette, PALETTE_SIZE);
-    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link_data, (link_width * link_height) / 2);
+    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) koopa_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) koopa_data, (koopa_width * koopa_height) / 2);
 }
 
 struct Link {
@@ -253,53 +273,53 @@ struct Link {
     int falling;
 };
 
-void link_init(struct Link* link) {
-    link->x = 100;
-    link->y = 113;
-    link->yvel = 0;
-    link->gravity = 50;
-    link->border = 40;
-    link->frame = 0;
-    link->move = 0;
-    link->counter = 0;
-    link->falling = 0;
-    link->animation_delay = 8;
-    link->sprite = sprite_init(link->x, link->y, SIZE_16_32, 0, 0, link->frame, 0);
+void koopa_init(struct Link* koopa) {
+    koopa->x = 100;
+    koopa->y = 113;
+    koopa->yvel = 0;
+    koopa->gravity = 50;
+    koopa->border = 40;
+    koopa->frame = 0;
+    koopa->move = 0;
+    koopa->counter = 0;
+    koopa->falling = 0;
+    koopa->animation_delay = 8;
+    koopa->sprite = sprite_init(koopa->x, koopa->y, SIZE_16_32, 0, 0, koopa->frame, 0);
 }
 
-int link_left(struct Link* link) {
-    sprite_set_horizontal_flip(link->sprite, 1);
-    link->move = 1;
-    if (link->x < link->border) {
+int koopa_left(struct Link* koopa) {
+    sprite_set_horizontal_flip(koopa->sprite, 1);
+    koopa->move = 1;
+    if (koopa->x < koopa->border) {
         return 1;
     } else {
-        link->x--;
+        koopa->x--;
         return 0;
     }
 }
 
-int link_right(struct Link* link) {
-    sprite_set_horizontal_flip(link->sprite, 0);
-    link->move = 1;
-    if (link->x > (SCREEN_WIDTH - 16 - link->border)) {
+int koopa_right(struct Link* koopa) {
+    sprite_set_horizontal_flip(koopa->sprite, 0);
+    koopa->move = 1;
+    if (koopa->x > (SCREEN_WIDTH - 16 - koopa->border)) {
         return 1;
     } else {
-        link->x++;
+        koopa->x++;
         return 0;
     }
 }
 
-void link_stop(struct Link* link) {
-    link->move = 0;
-    link->frame = 0;
-    link->counter = 7;
-    sprite_set_offset(link->sprite, link->frame);
+void koopa_stop(struct Link* koopa) {
+    koopa->move = 0;
+    koopa->frame = 0;
+    koopa->counter = 7;
+    sprite_set_offset(koopa->sprite, koopa->frame);
 }
 
-void link_jump(struct Link* link) {
-    if (!link->falling) {
-        link->yvel = -1350;
-        link->falling = 1;
+void koopa_jump(struct Link* koopa) {
+    if (!koopa->falling) {
+        koopa->yvel = -1350;
+        koopa->falling = 1;
     }
 }
 
@@ -307,8 +327,8 @@ unsigned short tile_lookup(int x, int y, int xscroll, int yscroll, const unsigne
     x += xscroll;
     y += yscroll;
 
-    x >> 3;
-    y >> 3;
+    x >>= 3;
+    y >>= 3;
 
     while (x >= tilemap_w) {
         x -= tilemap_w;
@@ -343,38 +363,38 @@ unsigned short tile_lookup(int x, int y, int xscroll, int yscroll, const unsigne
     return tilemap[index + offset];
 }
 
-void link_update(struct Link* link, int xscroll) {
-    if (link->falling) {
-        link->y += (link->yvel >> 8);
-        link->yvel += link->gravity;
+void koopa_update(struct Link* koopa, int xscroll) {
+    if (koopa->falling) {
+        koopa->y += (koopa->yvel >> 8);
+        koopa->yvel += koopa->gravity;
     }
 
-    unsigned short tile = tile_lookup(link->x + 8, link->y + 32, xscroll, 0, map, map_width, map_height);
+    unsigned short tile = tile_lookup(koopa->x + 8, koopa->y + 32, xscroll, 0, map, map_width, map_height);
 
     if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
-        link->falling = 0;
-        link->yvel = 0;
+        koopa->falling = 0;
+        koopa->yvel = 0;
 
-        link->y &= ~0x3;
+        koopa->y &= ~0x3;
 
-        link->y++;
+        koopa->y++;
     } else {
-        link->falling = 1;
+        koopa->falling = 1;
     }
 
-    if (link->move) {
-        link->counter++;
-        if (link->counter >= link->animation_delay) {
-            link->frame = link->frame + 16;
-            if (link->frame > 16) {
-                link->frame = 0;
+    if (koopa->move) {
+        koopa->counter++;
+        if (koopa->counter >= koopa->animation_delay) {
+            koopa->frame = koopa->frame + 16;
+            if (koopa->frame > 16) {
+                koopa->frame = 0;
             }
-            sprite_set_offset(link->sprite, link->frame);
-            link->counter = 0;
+            sprite_set_offset(koopa->sprite, koopa->frame);
+            koopa->counter = 0;
         }
     }
 
-    sprite_position(link->sprite, link->x, link->y);
+    sprite_position(koopa->sprite, koopa->x, koopa->y);
 }
 
 int main() {
@@ -382,30 +402,30 @@ int main() {
     setup_background();
     setup_sprite_image();
     sprite_clear();
-    struct Link link;
-    link_init(&link);
+    struct Link koopa;
+    koopa_init(&koopa);
     int xscroll = 0;
     while (1) {
-        link_update(&link, xscroll);
+        koopa_update(&koopa, xscroll);
         if (button_pressed(BUTTON_RIGHT)) {
-            if (link_right(&link)) {
+            if (koopa_right(&koopa)) {
                 xscroll++;
             }
         } else if (button_pressed(BUTTON_LEFT)) {
-            if (link_left(&link)) {
+            if (koopa_left(&koopa)) {
                 xscroll--;
             }
         } else {
-            link_stop(&link);
+            koopa_stop(&koopa);
         }
         
         if (button_pressed(BUTTON_A)) {
-            link_jump(&link);
+            koopa_jump(&koopa);
         }
 
         wait_vblank();
         *bg0_x_scroll = xscroll;
-        *bg0_x_scroll = 2 * xscroll;
+        *bg1_x_scroll = 2 * xscroll;
         sprite_update_all();
         delay(300);
     }
