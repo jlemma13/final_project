@@ -3,6 +3,8 @@
 
 #include "background.h"
 #include "link.h"
+//#include "link2.h"
+//#include "koopa.h"
 #include "map.h"
 #include "map2.h"
 
@@ -254,11 +256,20 @@ void sprite_set_offset(struct Sprite* sprite, int offset) {
     sprite->attribute2 |= (offset & 0x03ff);
 }
 
-void setup_sprite_image() {
-    // fill out once images are ready
+void setup_link_sprite_image() {
     memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link_palette, PALETTE_SIZE);
     memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link_data, (link_width * link_height) / 2);
 }
+
+/*void setup_link2_sprite_image() {
+    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link2_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link2_data, (link2_width * link2_height) / 2);
+}*/
+
+/*void setup_koopa_sprite_image() {
+    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) koopa_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) koopa_data, (koopa_width * koopa_height) / 2);
+}*/
 
 struct Link {
     struct Sprite* sprite;
@@ -280,7 +291,7 @@ void link_init(struct Link* link) {
     link->gravity = 50;
     link->border = 40;
     link->frame = 0;
-    link->move = 0;
+    link->move = 1;
     link->counter = 0;
     link->falling = 0;
     link->animation_delay = 8;
@@ -397,14 +408,108 @@ void link_update(struct Link* link, int xscroll) {
     sprite_position(link->sprite, link->x, link->y);
 }
 
+struct Link2 {
+    struct Sprite* sprite;
+    int x, y;
+    int yvel;
+    int gravity;
+    int frame;
+    int animation_delay;
+    int counter;
+    int move;
+    int border;
+    int falling;
+};
+
+void link2_init(struct Link2* link2) {
+    link2->x = 40;
+    link2->y = 113;
+    link2->yvel = 0;
+    link2->gravity = 50;
+    link2->border = 40;
+    link2->frame = 0;
+    link2->move = 1;
+    link2->counter = 0;
+    link2->falling = 0;
+    link2->animation_delay = 8;
+    link2->sprite = sprite_init(link2->x, link2->y, SIZE_16_32, 0, 0, link2->frame, 0);
+}
+
+int link2_left(struct Link2* link2) {
+    sprite_set_horizontal_flip(link2->sprite, 1);
+    link2->move = 1;
+
+    if (link2->x == 0) {
+        return 1;
+    } else {
+        link2->x--;
+        return 0;
+    }
+}
+int link2_right(struct Link2* link2) {
+    sprite_set_horizontal_flip(link2->sprite, 0);
+    link2->move = 1;
+
+    if (link2->x > (SCREEN_WIDTH - 16)) {
+        return 1;
+    } else {
+        link2->x++;
+        return 0;
+    }
+}
+
+void link2_stop(struct Link2* link2) {
+    link2->move = 0;
+    link2->frame = 0;
+    link2->counter = 7;
+    sprite_set_offset(link2->sprite, link2->frame);
+}
+
+void link2_update(struct Link2* link2, int xscroll) {
+    if (link2->falling) {
+        link2->y += (link2->yvel >> 8);
+        link2->yvel += link2->gravity;
+    }
+
+    unsigned short tile = tile_lookup(link2->x + 8, link2->y + 16, xscroll, 0, map2, map2_width, map2_height);
+
+    if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
+        link2->falling = 0;
+        link2->yvel = 0;
+        link2->y &= ~0x3;
+        link2->y++;
+    } else {
+        link2->falling = 1;
+    }
+
+    if (link2->move){
+        link2->counter++;
+        if (link2->counter >= link2->animation_delay) {
+            link2->frame = link2->frame + 16;
+            if (link2->frame > 16) {
+                link2->frame = 0;
+            }
+            sprite_set_offset(link2->sprite, link2->frame);
+            link2->counter = 0;
+        }
+    }
+
+    sprite_position(link2->sprite, link2->x, link2->y);
+}
+
 int main() {
     *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
     setup_background();
-    setup_sprite_image();
+    setup_link_sprite_image();
+    //setup_link2_sprite_image();
     sprite_clear();
     struct Link link;
     link_init(&link);
+    //setup_link2_sprite_image();
+    struct Link2 link2;
+    link2_init(&link2);
     int xscroll = 0;
+    //(&link2)->x++;
     while (1) {
         link_update(&link, xscroll);
         if (button_pressed(BUTTON_RIGHT)) {
@@ -418,10 +523,27 @@ int main() {
         } else {
             link_stop(&link);
         }
+
+        link2_update(&link2, xscroll);
+        if (link2_right(&link2)) {
+            link2_left(&link2);
+        }
+        if (link2_left(&link2)) {
+            link2_right(&link2);
+        }
         
         if (button_pressed(BUTTON_UP)) {
             link_jump(&link);
         }
+
+        /*if ((&link2)->move == 1) {
+            if (link2_right(&link2)) {
+                link2_left(&link2);
+            }
+            if (link2_left(&link2)) {
+                link2_right(&link2);
+            }
+        }*/
 
         wait_vblank();
         *bg0_x_scroll = xscroll;
