@@ -408,7 +408,7 @@ void link_update(struct Link* link, int xscroll) {
     sprite_position(link->sprite, link->x, link->y);
 }
 
-struct Link2 {
+struct Goomba {
     struct Sprite* sprite;
     int x, y;
     int yvel;
@@ -421,7 +421,7 @@ struct Link2 {
     int falling;
 };
 
-void goomba_init(struct Link2* goomba) {
+void goomba_init(struct Goomba* goomba) {
     goomba->x = 40;
     goomba->y = 113;
     goomba->yvel = 0;
@@ -435,7 +435,7 @@ void goomba_init(struct Link2* goomba) {
     goomba->sprite = sprite_init(goomba->x, goomba->y, SIZE_16_32, 0, 0, goomba->frame, 0);
 }
 
-int goomba_left(struct Link2* goomba) {
+int goomba_left(struct Goomba* goomba) {
     sprite_set_horizontal_flip(goomba->sprite, 1);
     goomba->move = 1;
 
@@ -446,7 +446,7 @@ int goomba_left(struct Link2* goomba) {
         return 0;
     }
 }
-int goomba_right(struct Link2* goomba) {
+int goomba_right(struct Goomba* goomba) {
     sprite_set_horizontal_flip(goomba->sprite, 0);
     goomba->move = 1;
 
@@ -458,18 +458,18 @@ int goomba_right(struct Link2* goomba) {
     }
 }
 
-void goomba_stop(struct Link2* goomba) {
+void goomba_stop(struct Goomba* goomba) {
     goomba->move = 0;
     goomba->frame = 0;
     goomba->counter = 7;
     sprite_set_offset(goomba->sprite, goomba->frame);
 }
 
-void goomba_update(struct Link2* goomba, int xscroll) {
-    if (goomba->falling) {
+void goomba_update(struct Goomba* goomba, int xscroll) {
+    /*if (goomba->falling) {
         goomba->y += (goomba->yvel >> 8);
         goomba->yvel += goomba->gravity;
-    }
+    }*/
 
     unsigned short tile = tile_lookup(goomba->x + 8, goomba->y + 16, xscroll, 0, map2, map2_width, map2_height);
 
@@ -478,9 +478,9 @@ void goomba_update(struct Link2* goomba, int xscroll) {
         goomba->yvel = 0;
         goomba->y &= ~0x3;
         goomba->y++;
-    } else {
+    } /*else {
         goomba->falling = 1;
-    }
+    }*/
 
     if (goomba->move){
         goomba->counter++;
@@ -506,7 +506,7 @@ int main() {
     struct Link link;
     link_init(&link);
     //setup_goomba_sprite_image();
-    struct Link2 goomba;
+    struct Goomba goomba;
     goomba_init(&goomba);
     int xscroll = 0;
     //(&goomba)->x++;
@@ -536,6 +536,8 @@ int main() {
             link_jump(&link);
         }
 
+        /*if ((&goomba)->move == 1) {
+            if (goomba_right(&goomba)) {
                 goomba_left(&goomba);
             }
             if (goomba_left(&goomba)) {
