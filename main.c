@@ -3,7 +3,7 @@
 
 #include "background.h"
 #include "link.h"
-//#include "link2.h"
+//#include "goomba.h"
 //#include "koopa.h"
 #include "map.h"
 #include "map2.h"
@@ -261,9 +261,9 @@ void setup_link_sprite_image() {
     memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link_data, (link_width * link_height) / 2);
 }
 
-/*void setup_link2_sprite_image() {
-    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link2_palette, PALETTE_SIZE);
-    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link2_data, (link2_width * link2_height) / 2);
+/*void setup_goomba_sprite_image() {
+    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) goomba_palette, PALETTE_SIZE);
+    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) goomba_data, (goomba_width * goomba_height) / 2);
 }*/
 
 /*void setup_koopa_sprite_image() {
@@ -421,95 +421,95 @@ struct Link2 {
     int falling;
 };
 
-void link2_init(struct Link2* link2) {
-    link2->x = 40;
-    link2->y = 113;
-    link2->yvel = 0;
-    link2->gravity = 50;
-    link2->border = 40;
-    link2->frame = 0;
-    link2->move = 1;
-    link2->counter = 0;
-    link2->falling = 0;
-    link2->animation_delay = 8;
-    link2->sprite = sprite_init(link2->x, link2->y, SIZE_16_32, 0, 0, link2->frame, 0);
+void goomba_init(struct Link2* goomba) {
+    goomba->x = 40;
+    goomba->y = 113;
+    goomba->yvel = 0;
+    goomba->gravity = 50;
+    goomba->border = 40;
+    goomba->frame = 0;
+    goomba->move = 1;
+    goomba->counter = 0;
+    goomba->falling = 0;
+    goomba->animation_delay = 8;
+    goomba->sprite = sprite_init(goomba->x, goomba->y, SIZE_16_32, 0, 0, goomba->frame, 0);
 }
 
-int link2_left(struct Link2* link2) {
-    sprite_set_horizontal_flip(link2->sprite, 1);
-    link2->move = 1;
+int goomba_left(struct Link2* goomba) {
+    sprite_set_horizontal_flip(goomba->sprite, 1);
+    goomba->move = 1;
 
-    if (link2->x == 0) {
+    if (goomba->x == 0) {
         return 1;
     } else {
-        link2->x--;
+        goomba->x--;
         return 0;
     }
 }
-int link2_right(struct Link2* link2) {
-    sprite_set_horizontal_flip(link2->sprite, 0);
-    link2->move = 1;
+int goomba_right(struct Link2* goomba) {
+    sprite_set_horizontal_flip(goomba->sprite, 0);
+    goomba->move = 1;
 
-    if (link2->x > (SCREEN_WIDTH - 16)) {
+    if (goomba->x > (SCREEN_WIDTH - 16)) {
         return 1;
     } else {
-        link2->x++;
+        goomba->x++;
         return 0;
     }
 }
 
-void link2_stop(struct Link2* link2) {
-    link2->move = 0;
-    link2->frame = 0;
-    link2->counter = 7;
-    sprite_set_offset(link2->sprite, link2->frame);
+void goomba_stop(struct Link2* goomba) {
+    goomba->move = 0;
+    goomba->frame = 0;
+    goomba->counter = 7;
+    sprite_set_offset(goomba->sprite, goomba->frame);
 }
 
-void link2_update(struct Link2* link2, int xscroll) {
-    if (link2->falling) {
-        link2->y += (link2->yvel >> 8);
-        link2->yvel += link2->gravity;
+void goomba_update(struct Link2* goomba, int xscroll) {
+    if (goomba->falling) {
+        goomba->y += (goomba->yvel >> 8);
+        goomba->yvel += goomba->gravity;
     }
 
-    unsigned short tile = tile_lookup(link2->x + 8, link2->y + 16, xscroll, 0, map2, map2_width, map2_height);
+    unsigned short tile = tile_lookup(goomba->x + 8, goomba->y + 16, xscroll, 0, map2, map2_width, map2_height);
 
     if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
-        link2->falling = 0;
-        link2->yvel = 0;
-        link2->y &= ~0x3;
-        link2->y++;
+        goomba->falling = 0;
+        goomba->yvel = 0;
+        goomba->y &= ~0x3;
+        goomba->y++;
     } else {
-        link2->falling = 1;
+        goomba->falling = 1;
     }
 
-    if (link2->move){
-        link2->counter++;
-        if (link2->counter >= link2->animation_delay) {
-            link2->frame = link2->frame + 16;
-            if (link2->frame > 16) {
-                link2->frame = 0;
+    if (goomba->move){
+        goomba->counter++;
+        if (goomba->counter >= goomba->animation_delay) {
+            goomba->frame = goomba->frame + 16;
+            if (goomba->frame > 16) {
+                goomba->frame = 0;
             }
-            sprite_set_offset(link2->sprite, link2->frame);
-            link2->counter = 0;
+            sprite_set_offset(goomba->sprite, goomba->frame);
+            goomba->counter = 0;
         }
     }
 
-    sprite_position(link2->sprite, link2->x, link2->y);
+    sprite_position(goomba->sprite, goomba->x, goomba->y);
 }
 
 int main() {
     *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
     setup_background();
     setup_link_sprite_image();
-    //setup_link2_sprite_image();
+    //setup_goomba_sprite_image();
     sprite_clear();
     struct Link link;
     link_init(&link);
-    //setup_link2_sprite_image();
-    struct Link2 link2;
-    link2_init(&link2);
+    //setup_goomba_sprite_image();
+    struct Link2 goomba;
+    goomba_init(&goomba);
     int xscroll = 0;
-    //(&link2)->x++;
+    //(&goomba)->x++;
     while (1) {
         link_update(&link, xscroll);
         if (button_pressed(BUTTON_RIGHT)) {
@@ -524,24 +524,22 @@ int main() {
             link_stop(&link);
         }
 
-        link2_update(&link2, xscroll);
-        if (link2_right(&link2)) {
-            link2_left(&link2);
+        goomba_update(&goomba, xscroll);
+        if (goomba_right(&goomba)) {
+            goomba_left(&goomba);
         }
-        if (link2_left(&link2)) {
-            link2_right(&link2);
+        if (goomba_left(&goomba)) {
+            goomba_right(&goomba);
         }
         
         if (button_pressed(BUTTON_UP)) {
             link_jump(&link);
         }
 
-        /*if ((&link2)->move == 1) {
-            if (link2_right(&link2)) {
-                link2_left(&link2);
+                goomba_left(&goomba);
             }
-            if (link2_left(&link2)) {
-                link2_right(&link2);
+            if (goomba_left(&goomba)) {
+                goomba_right(&goomba);
             }
         }*/
 
