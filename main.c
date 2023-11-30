@@ -4,7 +4,7 @@
 #include "background.h"
 #include "link.h"
 //#include "goomba.h"
-//#include "koopa.h"
+#include "koopa.h"
 #include "map.h"
 #include "map2.h"
 
@@ -282,6 +282,7 @@ struct Link {
     int move;
     int border;
     int falling;
+    int health;
 };
 
 void link_init(struct Link* link) {
@@ -295,6 +296,7 @@ void link_init(struct Link* link) {
     link->counter = 0;
     link->falling = 0;
     link->animation_delay = 8;
+    link->health = 10;
     link->sprite = sprite_init(link->x, link->y, SIZE_16_32, 0, 0, link->frame, 0);
 }
 
@@ -419,6 +421,8 @@ struct Goomba {
     int move;
     int border;
     int falling;
+    int direction;
+    int health;
 };
 
 void goomba_init(struct Goomba* goomba) {
@@ -432,6 +436,8 @@ void goomba_init(struct Goomba* goomba) {
     goomba->counter = 0;
     goomba->falling = 0;
     goomba->animation_delay = 8;
+    goomba->direction = 1;
+    goomba->health = 10;
     goomba->sprite = sprite_init(goomba->x, goomba->y, SIZE_16_32, 0, 0, goomba->frame, 0);
 }
 
@@ -497,6 +503,30 @@ void goomba_update(struct Goomba* goomba, int xscroll) {
     sprite_position(goomba->sprite, goomba->x, goomba->y);
 }
 
+void set_text(char* str, int row, int col) {
+    int index = row * 32 + col;
+    int missing = 32;
+    volatile unsigned short* ptr = screen_block(8);
+    while (*str) {
+        ptr[index] = *str - missing;
+        index++;
+        str++;
+    }
+}
+
+void reset() {
+    setup_background();
+    setup_link_sprite_image();
+    sprite_clear();
+    struct Link link
+    link_init(&link)
+    struct Goomba goomba;
+    goomba_init(&goomba);
+}
+
+int damage(int health);
+void over(int player_health, int cpu_health);
+
 int main() {
     *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
     setup_background();
@@ -525,25 +555,39 @@ int main() {
         }
 
         goomba_update(&goomba, xscroll);
-        if (goomba_right(&goomba)) {
+        /*if (goomba_right(&goomba)) {
             goomba_left(&goomba);
         }
         if (goomba_left(&goomba)) {
             goomba_right(&goomba);
-        }
+        }*/
         
         if (button_pressed(BUTTON_UP)) {
             link_jump(&link);
         }
 
-        /*if ((&goomba)->move == 1) {
-            if (goomba_right(&goomba)) {
-                goomba_left(&goomba);
+        if ((&goomba)->move == 1 && (&goomba)->direction == 1) {
+            if ((&goomba)->x == (SCREEN_WIDTH - 16)) {
+                (&goomba)->direction = -1;
+                sprite_set_horizontal_flip((&goomba)->sprite, 1);
+            } else {
+                (&goomba)->x++;
             }
-            if (goomba_left(&goomba)) {
-                goomba_right(&goomba);
+        }
+        if ((&goomba)->move == 1 && (&goomba)->direction == -1) {
+            if ((&goomba)->x == 0) {
+                (&goomba)->direction = 1;
+                sprite_set_horizontal_flip((&goomba)->sprite, 0);
+            } else {
+                (&goomba)->x--;
             }
-        }*/
+        }
+
+        if (((&link)->x == ((&goomba)->x + 16)) || (((&link)->x + 16) == (&gomba)->x)) {
+            (&link)->health = damage((&link)->health);
+        }
+
+        over((&link)->health, (&goomba)->health);
 
         wait_vblank();
         *bg0_x_scroll = xscroll;
@@ -553,4 +597,3 @@ int main() {
     }
 }
 
-// fill out rest once images are ready to be used
