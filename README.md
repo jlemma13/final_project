@@ -1,1 +1,5 @@
-# final_project
+# Game Description
+
+This is our final product complete with all of the necessary files. In this program you will find two sprites: one controlled by the player and one "controlled" by the computer. The player sprite can be moved with the left, right and up arrow keys. The player may also attack using the 'A' button. The premise of the game is to drain the health of your opponent. Each time the player makes contact with the cpu sprite, the player loses one health point. Likewise, each time the player hits the cpu with the 'A' button attack, the cpu loses one health point. Each player begins with 10 health points. When a player loses all of their health points, the game ends. This is shown by the screen freezing briefly, and the sprites resetting along with their health points.
+
+The assembly functions are used to manage the health points. damage.s is the function that assesses damage done to a player, and decreases the number of health points by one each time it is called. over.s is a function that assesses whether or not the game should end. If the game should not end then the function returns 0 and  nothing else will happen on that portion of the loop. If the game should end, then the function returns 1 and the game over code will happen causing the reset.
