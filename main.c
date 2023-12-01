@@ -3,8 +3,6 @@
 
 #include "background.h"
 #include "link.h"
-//#include "goomba.h"
-#include "koopa.h"
 #include "map.h"
 #include "map2.h"
 
@@ -96,16 +94,6 @@ void setup_background() {
 
     memcpy16_dma((unsigned short*) char_block(0), (unsigned short*) background_data, (background_width * background_height) / 2);
 
-    /*for (int i = 0; i < PALETTE_SIZE; i++) {
-        bg_palette[i] = background_palette[i];
-    }
-
-    volatile unsigned short* dest = char_block(0);
-    unsigned short* image = (unsigned short*) background_data;
-    for (int i = 0; i < ((background_width * background_height) / 2); i++) {
-        dest[i] = image[i];
-    }*/
-
     *bg0_control = 1 |
         (0 << 2) |
         (0 << 6) |
@@ -113,11 +101,6 @@ void setup_background() {
         (16 << 8) |
         (1 << 13) |
         (0 << 14);
-
-    /*dest = screen_block(16);
-    for (int i=0; i < (map_width * map_height); i++) {
-        dest[i] = map[i];
-    }*/
 
     memcpy16_dma((unsigned short*) screen_block(16), (unsigned short*) map, map_width * map_height);
 
@@ -128,11 +111,6 @@ void setup_background() {
         (24 << 8) |
         (1 << 13) |
         (0 << 14);
-
-    /*dest = screen_block(24);
-    for (int j = 0; j < (map_width * map_height); j++) {
-        dest[j] = map2[j];
-    }*/
 
     memcpy16_dma((unsigned short*) screen_block(24), (unsigned short*) map2, map_width * map_height);
 }
@@ -260,16 +238,6 @@ void setup_link_sprite_image() {
     memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) link_palette, PALETTE_SIZE);
     memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) link_data, (link_width * link_height) / 2);
 }
-
-/*void setup_goomba_sprite_image() {
-    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) goomba_palette, PALETTE_SIZE);
-    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) goomba_data, (goomba_width * goomba_height) / 2);
-}*/
-
-/*void setup_koopa_sprite_image() {
-    memcpy16_dma((unsigned short*) sprite_palette, (unsigned short*) koopa_palette, PALETTE_SIZE);
-    memcpy16_dma((unsigned short*) sprite_image_memory, (unsigned short*) koopa_data, (koopa_width * koopa_height) / 2);
-}*/
 
 struct Link {
     struct Sprite* sprite;
@@ -410,7 +378,7 @@ void link_update(struct Link* link, int xscroll) {
     sprite_position(link->sprite, link->x, link->y);
 }
 
-struct Goomba {
+struct Enemy {
     struct Sprite* sprite;
     int x, y;
     int yvel;
@@ -425,110 +393,54 @@ struct Goomba {
     int health;
 };
 
-void goomba_init(struct Goomba* goomba) {
-    goomba->x = 40;
-    goomba->y = 113;
-    goomba->yvel = 0;
-    goomba->gravity = 50;
-    goomba->border = 40;
-    goomba->frame = 0;
-    goomba->move = 1;
-    goomba->counter = 0;
-    goomba->falling = 0;
-    goomba->animation_delay = 8;
-    goomba->direction = 1;
-    goomba->health = 10;
-    goomba->sprite = sprite_init(goomba->x, goomba->y, SIZE_16_32, 0, 0, goomba->frame, 0);
+void enemy_init(struct Enemy* enemy) {
+    enemy->x = 40;
+    enemy->y = 113;
+    enemy->yvel = 0;
+    enemy->gravity = 50;
+    enemy->border = 40;
+    enemy->frame = 0;
+    enemy->move = 1;
+    enemy->counter = 0;
+    enemy->falling = 0;
+    enemy->animation_delay = 8;
+    enemy->direction = 1;
+    enemy->health = 10;
+    enemy->sprite = sprite_init(enemy->x, enemy->y, SIZE_16_32, 0, 0, enemy->frame, 0);
 }
 
-int goomba_left(struct Goomba* goomba) {
-    sprite_set_horizontal_flip(goomba->sprite, 1);
-    goomba->move = 1;
-
-    if (goomba->x == 0) {
-        return 1;
-    } else {
-        goomba->x--;
-        return 0;
-    }
-}
-int goomba_right(struct Goomba* goomba) {
-    sprite_set_horizontal_flip(goomba->sprite, 0);
-    goomba->move = 1;
-
-    if (goomba->x > (SCREEN_WIDTH - 16)) {
-        return 1;
-    } else {
-        goomba->x++;
-        return 0;
-    }
+void enemy_stop(struct Enemy* enemy) {
+    enemy->move = 0;
+    enemy->frame = 0;
+    enemy->counter = 7;
+    sprite_set_offset(enemy->sprite, enemy->frame);
 }
 
-void goomba_stop(struct Goomba* goomba) {
-    goomba->move = 0;
-    goomba->frame = 0;
-    goomba->counter = 7;
-    sprite_set_offset(goomba->sprite, goomba->frame);
-}
+void enemy_update(struct Enemy* enemy, int xscroll) {
 
-void goomba_update(struct Goomba* goomba, int xscroll) {
-    /*if (goomba->falling) {
-        goomba->y += (goomba->yvel >> 8);
-        goomba->yvel += goomba->gravity;
-    }*/
-
-    unsigned short tile = tile_lookup(goomba->x + 8, goomba->y + 16, xscroll, 0, map2, map2_width, map2_height);
+    unsigned short tile = tile_lookup(enemy->x + 8, enemy->y + 16, xscroll, 0, map2, map2_width, map2_height);
 
     if ((tile >= 1 && tile <= 6) || (tile >= 12 && tile <= 17)) {
-        goomba->falling = 0;
-        goomba->yvel = 0;
-        goomba->y &= ~0x3;
-        goomba->y++;
-    } /*else {
-        goomba->falling = 1;
-    }*/
+        enemy->falling = 0;
+        enemy->yvel = 0;
+        enemy->y &= ~0x3;
+        enemy->y++;
+    }
 
-    if (goomba->move){
-        goomba->counter++;
-        if (goomba->counter >= goomba->animation_delay) {
-            goomba->frame = goomba->frame + 16;
-            if (goomba->frame > 16) {
-                goomba->frame = 0;
+    if (enemy->move){
+        enemy->counter++;
+        if (enemy->counter >= enemy->animation_delay) {
+            enemy->frame = enemy->frame + 16;
+            if (enemy->frame > 16) {
+                enemy->frame = 0;
             }
-            sprite_set_offset(goomba->sprite, goomba->frame);
-            goomba->counter = 0;
+            sprite_set_offset(enemy->sprite, enemy->frame);
+            enemy->counter = 0;
         }
     }
 
-    sprite_position(goomba->sprite, goomba->x, goomba->y);
+    sprite_position(enemy->sprite, enemy->x, enemy->y);
 }
-
-void set_text(char* str, int row, int col) {
-    int index = row * 32 + col;
-    int missing = 32;
-    volatile unsigned short* ptr = screen_block(8);
-    while (*str) {
-        ptr[index] = *str - missing;
-        index++;
-        str++;
-    }
-}
-
-/*void reset(struct Link* link, struct Goomba* goomba) {
-    setup_background();
-    setup_link_sprite_image();
-    sprite_clear();
-    struct Link link;
-    link_init(&link);
-    struct Goomba goomba;
-    goomba_init(&goomba);
-    
-    goomba_stop(goomba);
-    delay(500);
-    sprite_clear;
-    goomba_init(goomba);
-    link_init(link);
-}*/
 
 int damage(int health);
 int over(int player_health, int cpu_health);
@@ -537,15 +449,12 @@ int main() {
     *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
     setup_background();
     setup_link_sprite_image();
-    //setup_goomba_sprite_image();
     sprite_clear();
     struct Link link;
     link_init(&link);
-    //setup_goomba_sprite_image();
-    struct Goomba goomba;
-    goomba_init(&goomba);
+    struct Enemy enemy;
+    enemy_init(&enemy);
     int xscroll = 0;
-    //(&goomba)->x++;
     while (1) {
         link_update(&link, xscroll);
         if (button_pressed(BUTTON_RIGHT)) {
@@ -560,55 +469,49 @@ int main() {
             link_stop(&link);
         }
 
-        goomba_update(&goomba, xscroll);
-        /*if (goomba_right(&goomba)) {
-            goomba_left(&goomba);
-        }
-        if (goomba_left(&goomba)) {
-            goomba_right(&goomba);
-        }*/
+        enemy_update(&enemy, xscroll);
         
         if (button_pressed(BUTTON_UP)) {
             link_jump(&link);
         }
 
         if (button_pressed(BUTTON_A)) {
-            if  (((&link)->x >= ((&goomba)->x - 24)) && ((&link)->x <= ((&goomba)->x + 24))) {
-                if ((&link)->y >= ((&goomba)->y - 16)) {
-                    (&goomba)->health = damage((&goomba)->health);
+            if  (((&link)->x >= ((&enemy)->x - 24)) && ((&link)->x <= ((&enemy)->x + 24))) {
+                if ((&link)->y >= ((&enemy)->y - 16)) {
+                    (&enemy)->health = damage((&enemy)->health);
                 }
             }
         }
 
-        if ((&goomba)->move == 1 && (&goomba)->direction == 1) {
-            if ((&goomba)->x == (SCREEN_WIDTH - 16)) {
-                (&goomba)->direction = -1;
-                sprite_set_horizontal_flip((&goomba)->sprite, 1);
+        if ((&enemy)->move == 1 && (&enemy)->direction == 1) {
+            if ((&enemy)->x == (SCREEN_WIDTH - 16)) {
+                (&enemy)->direction = -1;
+                sprite_set_horizontal_flip((&enemy)->sprite, 1);
             } else {
-                (&goomba)->x++;
+                (&enemy)->x++;
             }
         }
-        if ((&goomba)->move == 1 && (&goomba)->direction == -1) {
-            if ((&goomba)->x == 0) {
-                (&goomba)->direction = 1;
-                sprite_set_horizontal_flip((&goomba)->sprite, 0);
+        if ((&enemy)->move == 1 && (&enemy)->direction == -1) {
+            if ((&enemy)->x == 0) {
+                (&enemy)->direction = 1;
+                sprite_set_horizontal_flip((&enemy)->sprite, 0);
             } else {
-                (&goomba)->x--;
+                (&enemy)->x--;
             }
         }
 
-        if (((&link)->x == ((&goomba)->x + 16)) || (((&link)->x + 16) == (&goomba)->x)) {
-            if ((&link)->y >= ((&goomba)->y - 16)) {
+        if (((&link)->x == ((&enemy)->x + 16)) || (((&link)->x + 16) == (&enemy)->x)) {
+            if ((&link)->y >= ((&enemy)->y - 16)) {
                 (&link)->health = damage((&link)->health);
             }
         }
 
-        if (over((&link)->health, (&goomba)->health)) {
-            goomba_stop(&goomba);
+        if (over((&link)->health, (&enemy)->health)) {
+            enemy_stop(&enemy);
             delay(100000);
             sprite_clear();
             link_init(&link);
-            goomba_init(&goomba);
+            enemy_init(&enemy);
         }
 
         wait_vblank();
