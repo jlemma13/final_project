@@ -4,5 +4,5 @@ damage:
     beq .end
     sub r1, r0, #1
 .end:
-    mov ro, r1
+    mov r0, r1
     mov pc, lr

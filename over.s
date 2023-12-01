@@ -4,9 +4,10 @@ over:
     beq .end
     cmp r1, #0
     beq .end
+    mov r2, #0
     b .none
 .end:
-    bl game_over
-    bl reset
+    mov r2, #1
 .none:
+    mov r0, r2
     mov pc, lr
