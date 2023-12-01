@@ -514,7 +514,7 @@ void set_text(char* str, int row, int col) {
     }
 }
 
-void reset() {
+/*void reset(struct Link* link, struct Goomba* goomba) {
     setup_background();
     setup_link_sprite_image();
     sprite_clear();
@@ -522,10 +522,16 @@ void reset() {
     link_init(&link);
     struct Goomba goomba;
     goomba_init(&goomba);
-}
+    
+    goomba_stop(goomba);
+    delay(500);
+    sprite_clear;
+    goomba_init(goomba);
+    link_init(link);
+}*/
 
 int damage(int health);
-void over(int player_health, int cpu_health);
+int over(int player_health, int cpu_health);
 
 int main() {
     *display_control = MODE0 | BG0_ENABLE | BG1_ENABLE | SPRITE_ENABLE | SPRITE_MAP_1D;
@@ -566,6 +572,14 @@ int main() {
             link_jump(&link);
         }
 
+        if (button_pressed(BUTTON_A)) {
+            if  (((&link)->x >= ((&goomba)->x - 24)) && ((&link)->x <= ((&goomba)->x + 24))) {
+                if ((&link)->y >= ((&goomba)->y - 16)) {
+                    (&goomba)->health = damage((&goomba)->health);
+                }
+            }
+        }
+
         if ((&goomba)->move == 1 && (&goomba)->direction == 1) {
             if ((&goomba)->x == (SCREEN_WIDTH - 16)) {
                 (&goomba)->direction = -1;
@@ -584,10 +598,18 @@ int main() {
         }
 
         if (((&link)->x == ((&goomba)->x + 16)) || (((&link)->x + 16) == (&goomba)->x)) {
-            (&link)->health = damage((&link)->health);
+            if ((&link)->y >= ((&goomba)->y - 16)) {
+                (&link)->health = damage((&link)->health);
+            }
         }
 
-        over((&link)->health, (&goomba)->health);
+        if (over((&link)->health, (&goomba)->health)) {
+            goomba_stop(&goomba);
+            delay(100000);
+            sprite_clear();
+            link_init(&link);
+            goomba_init(&goomba);
+        }
 
         wait_vblank();
         *bg0_x_scroll = xscroll;
