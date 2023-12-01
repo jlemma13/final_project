@@ -6,7 +6,7 @@ over:
     beq .end
     b .none
 .end:
-    bl game_over
+    @bl game_over
     bl reset
 .none:
     mov pc, lr

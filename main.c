@@ -518,8 +518,8 @@ void reset() {
     setup_background();
     setup_link_sprite_image();
     sprite_clear();
-    struct Link link
-    link_init(&link)
+    struct Link link;
+    link_init(&link);
     struct Goomba goomba;
     goomba_init(&goomba);
 }
@@ -583,7 +583,7 @@ int main() {
             }
         }
 
-        if (((&link)->x == ((&goomba)->x + 16)) || (((&link)->x + 16) == (&gomba)->x)) {
+        if (((&link)->x == ((&goomba)->x + 16)) || (((&link)->x + 16) == (&goomba)->x)) {
             (&link)->health = damage((&link)->health);
         }
 
